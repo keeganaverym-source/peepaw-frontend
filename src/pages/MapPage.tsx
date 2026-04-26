@@ -20,6 +20,8 @@ const NICHES = [
 ];
 
 export default function MapPage() {
+  console.log('MapPage rendering, API Key length:', GOOGLE_MAPS_KEY.length);
+  console.log('API Key starts with:', GOOGLE_MAPS_KEY.substring(0, 10));
   const [center, setCenter] = useState({ lat: 40.7128, lng: -74.006 });
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
@@ -194,26 +196,10 @@ export default function MapPage() {
           <Map
             defaultCenter={center}
             defaultZoom={14}
-            mapId="peepaw-map"
             onCenterChanged={(e) => setCenter(e.detail.center)}
             style={{ width: '100%', height: '100%' }}
-            colorScheme="DARK"
           >
-            {businesses.map((biz) => (
-              <AdvancedMarker
-                key={biz.place_id}
-                position={{ lat: biz.lat || 0, lng: biz.lng || 0 }}
-                onClick={() => handleMarkerClick(biz)}
-                title={biz.name}
-              >
-                <Pin
-                  background={getMarkerColor(biz)}
-                  borderColor={easyWinIds.has(biz.place_id) ? '#ffffff' : 'transparent'}
-                  glyphColor="#ffffff"
-                  scale={easyWinIds.has(biz.place_id) ? 1.3 : 1.0}
-                />
-              </AdvancedMarker>
-            ))}
+            {/* Markers temporarily disabled to debug map loading */}
           </Map>
         </APIProvider>
 
