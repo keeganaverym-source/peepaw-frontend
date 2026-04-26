@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@layer base {
+  body {
+    @apply bg-dark-950 text-gray-100 font-sans antialiased;
+    background-image: radial-gradient(ellipse at 20% 50%, rgba(0,212,255,0.03) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(0,212,255,0.02) 0%, transparent 50%);
+  }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #0a0f1e; }
+  ::-webkit-scrollbar-thumb { background: #1a2540; border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: #00d4ff; }
+}
+
+@layer components {
+  .card { @apply bg-dark-800 border border-dark-600 rounded-xl shadow-card; }
+  .card-glow { @apply bg-dark-800 border border-accent/20 rounded-xl shadow-glow-sm; }
+  .btn-primary { @apply bg-accent text-dark-950 font-semibold px-4 py-2 rounded-lg hover:bg-accent-dark transition-all duration-200 hover:shadow-glow active:scale-95; }
+  .btn-secondary { @apply bg-dark-700 text-gray-200 font-medium px-4 py-2 rounded-lg border border-dark-500 hover:border-accent/50 hover:text-accent transition-all duration-200 active:scale-95; }
+  .btn-danger { @apply bg-red-500/10 text-red-400 font-medium px-4 py-2 rounded-lg border border-red-500/30 hover:bg-red-500/20 transition-all duration-200 active:scale-95; }
+  .btn-success { @apply bg-green-500/10 text-green-400 font-medium px-4 py-2 rounded-lg border border-green-500/30 hover:bg-green-500/20 transition-all duration-200 active:scale-95; }
+  .input { @apply bg-dark-700 border border-dark-500 text-gray-100 rounded-lg px-3 py-2 w-full focus:outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30 transition-all placeholder-gray-500; }
+  .select { @apply bg-dark-700 border border-dark-500 text-gray-100 rounded-lg px-3 py-2 w-full focus:outline-none focus:border-accent/60 transition-all cursor-pointer; }
+  .badge { @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium; }
+  .section-title { @apply text-xs font-semibold uppercase tracking-widest text-accent/70 mb-3; }
+  .stat-card { @apply bg-dark-800 border border-dark-600 rounded-xl shadow-card p-4 flex flex-col gap-1; }
+  .no-website-alert { @apply bg-orange-500/10 border-2 border-orange-500/50 rounded-xl p-4 text-center; }
+  .panel-section { @apply border-b border-dark-600 pb-4 mb-4 last:border-0 last:pb-0 last:mb-0; }
+}
