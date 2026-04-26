@@ -1,241 +1,191 @@
-import { useState, useCallback } from 'react';
-import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
-import { Search, Zap, Globe, Filter, ChevronDown } from 'lucide-react';
-import { useMutation } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Users, Trash2, Download, Filter, Globe, Phone, MapPin } from 'lucide-react';
 import toast from 'react-hot-toast';
-import type { Business } from '../lib/api';
-import { searchBusinesses, findEasyWins, findNoWebsite, getBusinessDetails } from '../lib/api';
-import BusinessPanel from '../components/panel/BusinessPanel';
-import { LoadingSpinner } from '../components/shared/UI';
+import { getLeads, deleteLead, updateLead, exportLeadsCSV } from '../lib/api';
+import type { Lead } from '../lib/api';
+import { LikelihoodBadge, StatusBadge, StarRating, LoadingSpinner } from '../components/shared/UI';
 
-const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY || '';
+const STATUSES = ['All', 'Potential', 'Contacted', 'In Progress', 'Sold', 'Lost'];
 
-const NICHES = [
-  { value: 'custom', label: 'All Businesses' },
-  { value: 'restaurants', label: 'Restaurants' },
-  { value: 'contractors', label: 'Contractors' },
-  { value: 'med_spas', label: 'Med Spas' },
-  { value: 'real_estate', label: 'Real Estate' },
-  { value: 'retail', label: 'Retail' },
-];
+export default function LeadsPage() {
+  const [statusFilter, setStatusFilter] = useState('All');
+  const qc = useQueryClient();
 
-export default function MapPage() {
-  const [center, setCenter] = useState({ lat: 40.7128, lng: -74.006 });
-  const [businesses, setBusinesses] = useState<Business[]>([]);
-  const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
-  const [niche, setNiche] = useState('custom');
-  const [keyword, setKeyword] = useState('');
-  const [radius, setRadius] = useState(1500);
-  const [filterMode, setFilterMode] = useState<'all' | 'easy_wins' | 'no_website'>('all');
-  const [easyWinIds, setEasyWinIds] = useState<Set<string>>(new Set());
-  const [panelOpen, setPanelOpen] = useState(false);
-
-  const searchMutation = useMutation({
-    mutationFn: () => {
-      if (filterMode === 'easy_wins') return findEasyWins({ lat: center.lat, lng: center.lng, radius, niche });
-      if (filterMode === 'no_website') return findNoWebsite({ lat: center.lat, lng: center.lng, radius, niche });
-      return searchBusinesses({ lat: center.lat, lng: center.lng, radius, niche, keyword });
-    },
-    onSuccess: (res) => {
-      const biz = res.data.businesses || [];
-      setBusinesses(biz);
-      if (filterMode === 'easy_wins') {
-        setEasyWinIds(new Set(biz.map((b: Business) => b.place_id)));
-      } else {
-        setEasyWinIds(new Set());
-      }
-      toast.success(`Found ${biz.length} businesses`);
-    },
-    onError: () => toast.error('Search failed. Check your API keys.'),
+  const { data: leads = [], isLoading } = useQuery({
+    queryKey: ['leads', statusFilter],
+    queryFn: () =>
+      getLeads(statusFilter !== 'All' ? { status: statusFilter } : undefined).then((r) => r.data),
   });
 
-  const detailsMutation = useMutation({
-    mutationFn: (placeId: string) => getBusinessDetails(placeId, niche),
-    onSuccess: (res) => {
-      setSelectedBusiness(res.data);
-      setPanelOpen(true);
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => deleteLead(id),
+    onSuccess: () => {
+      toast.success('Lead deleted');
+      qc.invalidateQueries({ queryKey: ['leads'] });
     },
-    onError: () => toast.error('Failed to load business details'),
+    onError: () => toast.error('Failed to delete lead'),
   });
 
-  const handleMarkerClick = useCallback((biz: Business) => {
-    detailsMutation.mutate(biz.place_id);
-  }, [niche]);
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: string }) => updateLead(id, { status }),
+    onSuccess: () => {
+      toast.success('Status updated');
+      qc.invalidateQueries({ queryKey: ['leads'] });
+    },
+    onError: () => toast.error('Failed to update status'),
+  });
 
-  const getMarkerColor = (biz: Business) => {
-    if (easyWinIds.has(biz.place_id)) return '#ff6b35';
-    if (!biz.has_website) return '#ff4444';
-    const score = biz.lead_score || 0;
-    if (score >= 4) return '#ff6b35';
-    if (score >= 2.5) return '#ffb800';
-    return '#4a9eff';
-  };
+  const exportMutation = useMutation({
+    mutationFn: exportLeadsCSV,
+    onSuccess: (res) => {
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'leads.csv';
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success('CSV exported!');
+    },
+    onError: () => toast.error('Export failed'),
+  });
 
   return (
-    <div className="flex h-full">
-      {/* Map Area */}
-      <div className="flex-1 relative">
-        {/* Top Controls Bar */}
-        <div className="absolute top-4 left-4 right-4 z-10 flex gap-2 flex-wrap">
-          {/* Niche Selector */}
-          <div className="relative">
-            <select
-              value={niche}
-              onChange={(e) => setNiche(e.target.value)}
-              className="select pl-3 pr-8 py-2 text-sm min-w-[140px] appearance-none"
-            >
-              {NICHES.map((n) => (
-                <option key={n.value} value={n.value}>{n.label}</option>
-              ))}
-            </select>
-            <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-          </div>
-
-          {/* Keyword Search */}
-          <div className="relative flex-1 min-w-[160px] max-w-xs">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              placeholder="Search keyword..."
-              className="input pl-8 py-2 text-sm"
-              onKeyDown={(e) => e.key === 'Enter' && searchMutation.mutate()}
-            />
-          </div>
-
-          {/* Radius */}
-          <select
-            value={radius}
-            onChange={(e) => setRadius(Number(e.target.value))}
-            className="select py-2 text-sm w-28"
-          >
-            <option value={500}>500m</option>
-            <option value={1000}>1 km</option>
-            <option value={1500}>1.5 km</option>
-            <option value={3000}>3 km</option>
-            <option value={5000}>5 km</option>
-          </select>
-
-          {/* Search Button */}
+    <div className="h-full flex flex-col bg-dark-950 overflow-hidden">
+      {/* Header */}
+      <div className="p-4 border-b border-dark-700 flex items-center justify-between gap-4 flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <Users size={20} className="text-accent" />
+          <h1 className="text-lg font-semibold text-gray-100">Leads</h1>
+          <span className="badge bg-accent/10 text-accent border border-accent/20 text-xs">
+            {leads.length}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => searchMutation.mutate()}
-            disabled={searchMutation.isPending}
-            className="btn-primary flex items-center gap-2 py-2"
+            onClick={() => exportMutation.mutate()}
+            disabled={exportMutation.isPending}
+            className="btn-secondary flex items-center gap-2 text-sm"
           >
-            {searchMutation.isPending ? <LoadingSpinner size={14} /> : <Search size={14} />}
-            Search
+            {exportMutation.isPending ? <LoadingSpinner size={14} /> : <Download size={14} />}
+            Export CSV
           </button>
+        </div>
+      </div>
 
-          {/* Easy Wins */}
+      {/* Filters */}
+      <div className="px-4 py-2 border-b border-dark-700 flex items-center gap-2 flex-shrink-0 overflow-x-auto">
+        <Filter size={14} className="text-gray-500 shrink-0" />
+        {STATUSES.map((s) => (
           <button
-            onClick={() => { setFilterMode('easy_wins'); searchMutation.mutate(); }}
-            disabled={searchMutation.isPending}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all border ${
-              filterMode === 'easy_wins'
-                ? 'bg-orange-500/20 text-orange-400 border-orange-500/50'
-                : 'bg-dark-700 text-gray-300 border-dark-500 hover:border-orange-500/40 hover:text-orange-400'
+            key={s}
+            onClick={() => setStatusFilter(s)}
+            className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+              statusFilter === s
+                ? 'bg-accent/15 text-accent border border-accent/30'
+                : 'text-gray-500 hover:text-gray-300 border border-transparent'
             }`}
           >
-            <Zap size={14} />
-            Easy Wins
+            {s}
           </button>
+        ))}
+      </div>
 
-          {/* No Website */}
-          <button
-            onClick={() => { setFilterMode('no_website'); searchMutation.mutate(); }}
-            disabled={searchMutation.isPending}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all border ${
-              filterMode === 'no_website'
-                ? 'bg-red-500/20 text-red-400 border-red-500/50'
-                : 'bg-dark-700 text-gray-300 border-dark-500 hover:border-red-500/40 hover:text-red-400'
-            }`}
-          >
-            <Globe size={14} />
-            No Website
-          </button>
-
-          {filterMode !== 'all' && (
-            <button
-              onClick={() => { setFilterMode('all'); setEasyWinIds(new Set()); }}
-              className="btn-secondary py-2 text-xs"
-            >
-              <Filter size={12} className="inline mr-1" />
-              Clear Filter
-            </button>
-          )}
-        </div>
-
-        {/* Results Count */}
-        {businesses.length > 0 && (
-          <div className="absolute bottom-4 left-4 z-10">
-            <div className="card px-3 py-2 text-xs text-gray-400 flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-              {businesses.length} businesses found
-              {filterMode === 'easy_wins' && <span className="text-orange-400 font-medium">— Easy Wins only</span>}
-              {filterMode === 'no_website' && <span className="text-red-400 font-medium">— No website</span>}
-            </div>
+      {/* Leads List */}
+      <div className="flex-1 overflow-y-auto p-4">
+        {isLoading ? (
+          <div className="flex justify-center items-center h-40">
+            <LoadingSpinner size={32} />
           </div>
-        )}
-
-        {/* Legend */}
-        <div className="absolute bottom-4 right-4 z-10 card px-3 py-2">
-          <div className="text-xs text-gray-500 mb-1.5 font-medium">Legend</div>
-          <div className="flex flex-col gap-1 text-xs">
-            <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-orange-500" /><span className="text-gray-400">Hot / Easy Win</span></div>
-            <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-yellow-500" /><span className="text-gray-400">Warm</span></div>
-            <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-blue-500" /><span className="text-gray-400">Cold</span></div>
-            <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-red-500" /><span className="text-gray-400">No Website</span></div>
+        ) : leads.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-40 text-center">
+            <Users size={40} className="text-gray-700 mb-3" />
+            <p className="text-gray-500 text-sm">No leads found.</p>
+            <p className="text-gray-600 text-xs mt-1">Save businesses from the Map to see them here.</p>
           </div>
-        </div>
-
-        {/* Google Map */}
-        <APIProvider apiKey={GOOGLE_MAPS_KEY}>
-          <Map
-            defaultCenter={center}
-            defaultZoom={14}
-            mapId="peepaw-map"
-            onCenterChanged={(e) => setCenter(e.detail.center)}
-            style={{ width: '100%', height: '100%' }}
-            colorScheme="DARK"
-          >
-            {businesses.map((biz) => (
-              <AdvancedMarker
-                key={biz.place_id}
-                position={{ lat: biz.lat || 0, lng: biz.lng || 0 }}
-                onClick={() => handleMarkerClick(biz)}
-                title={biz.name}
-              >
-                <Pin
-                  background={getMarkerColor(biz)}
-                  borderColor={easyWinIds.has(biz.place_id) ? '#ffffff' : 'transparent'}
-                  glyphColor="#ffffff"
-                  scale={easyWinIds.has(biz.place_id) ? 1.3 : 1.0}
-                />
-              </AdvancedMarker>
+        ) : (
+          <div className="grid gap-3">
+            {(leads as Lead[]).map((lead) => (
+              <div key={lead.id} className="card p-4 hover:border-dark-500 transition-colors">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <h3 className="font-semibold text-gray-100 text-sm truncate">{lead.name}</h3>
+                      <LikelihoodBadge likelihood={lead.likelihood} />
+                    </div>
+                    <div className="space-y-1 mt-2">
+                      {lead.address && (
+                        <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                          <MapPin size={11} className="text-accent shrink-0" />
+                          <span className="truncate">{lead.address}</span>
+                        </div>
+                      )}
+                      {lead.phone && (
+                        <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                          <Phone size={11} className="text-accent shrink-0" />
+                          <a href={`tel:${lead.phone}`} className="hover:text-accent transition-colors">
+                            {lead.phone}
+                          </a>
+                        </div>
+                      )}
+                      {lead.website ? (
+                        <div className="flex items-center gap-1.5 text-xs">
+                          <Globe size={11} className="text-accent shrink-0" />
+                          <a
+                            href={lead.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-accent hover:underline truncate"
+                          >
+                            {lead.website.replace(/^https?:\/\//, '')}
+                          </a>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-xs">
+                          <Globe size={11} className="text-red-400 shrink-0" />
+                          <span className="text-red-400 font-medium">No website</span>
+                        </div>
+                      )}
+                    </div>
+                    {lead.rating && (
+                      <div className="mt-2">
+                        <StarRating rating={lead.rating} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                    <StatusBadge status={lead.status} />
+                    <select
+                      value={lead.status}
+                      onChange={(e) => updateStatusMutation.mutate({ id: lead.id, status: e.target.value })}
+                      className="select text-xs py-1 px-2 w-32"
+                    >
+                      {STATUSES.filter((s) => s !== 'All').map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Delete ${lead.name}?`)) deleteMutation.mutate(lead.id);
+                      }}
+                      className="text-gray-600 hover:text-red-400 transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+                {lead.niche && (
+                  <div className="mt-2 pt-2 border-t border-dark-700">
+                    <span className="badge bg-dark-700 text-gray-400 border border-dark-500 text-[10px]">
+                      {lead.niche.replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                )}
+              </div>
             ))}
-          </Map>
-        </APIProvider>
-
-        {/* Loading overlay */}
-        {detailsMutation.isPending && (
-          <div className="absolute inset-0 bg-dark-950/50 flex items-center justify-center z-20">
-            <div className="card px-6 py-4 flex items-center gap-3">
-              <LoadingSpinner size={20} />
-              <span className="text-sm text-gray-300">Analyzing business...</span>
-            </div>
           </div>
         )}
       </div>
-
-      {/* Business Analysis Panel */}
-      {panelOpen && selectedBusiness && (
-        <BusinessPanel
-          business={selectedBusiness}
-          niche={niche}
-          onClose={() => { setPanelOpen(false); setSelectedBusiness(null); }}
-        />
-      )}
     </div>
   );
 }

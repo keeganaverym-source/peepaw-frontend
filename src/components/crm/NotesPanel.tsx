@@ -1,33 +1,123 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Plus, Trash2, Brain } from 'lucide-react';
+import { format } from 'date-fns';
+import toast from 'react-hot-toast';
+import { getNotes, addNote, deleteNote, generateFollowUp } from '../../lib/api';
+import { LoadingSpinner } from '../shared/UI';
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-
-@layer base {
-  body {
-    @apply bg-dark-950 text-gray-100 font-sans antialiased;
-    background-image: radial-gradient(ellipse at 20% 50%, rgba(0,212,255,0.03) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 20%, rgba(0,212,255,0.02) 0%, transparent 50%);
-  }
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: #0a0f1e; }
-  ::-webkit-scrollbar-thumb { background: #1a2540; border-radius: 9999px; }
-  ::-webkit-scrollbar-thumb:hover { background: #00d4ff; }
+interface Props {
+  leadId: number;
 }
 
-@layer components {
-  .card { @apply bg-dark-800 border border-dark-600 rounded-xl shadow-card; }
-  .card-glow { @apply bg-dark-800 border border-accent/20 rounded-xl shadow-glow-sm; }
-  .btn-primary { @apply bg-accent text-dark-950 font-semibold px-4 py-2 rounded-lg hover:bg-accent-dark transition-all duration-200 hover:shadow-glow active:scale-95; }
-  .btn-secondary { @apply bg-dark-700 text-gray-200 font-medium px-4 py-2 rounded-lg border border-dark-500 hover:border-accent/50 hover:text-accent transition-all duration-200 active:scale-95; }
-  .btn-danger { @apply bg-red-500/10 text-red-400 font-medium px-4 py-2 rounded-lg border border-red-500/30 hover:bg-red-500/20 transition-all duration-200 active:scale-95; }
-  .btn-success { @apply bg-green-500/10 text-green-400 font-medium px-4 py-2 rounded-lg border border-green-500/30 hover:bg-green-500/20 transition-all duration-200 active:scale-95; }
-  .input { @apply bg-dark-700 border border-dark-500 text-gray-100 rounded-lg px-3 py-2 w-full focus:outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30 transition-all placeholder-gray-500; }
-  .select { @apply bg-dark-700 border border-dark-500 text-gray-100 rounded-lg px-3 py-2 w-full focus:outline-none focus:border-accent/60 transition-all cursor-pointer; }
-  .badge { @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium; }
-  .section-title { @apply text-xs font-semibold uppercase tracking-widest text-accent/70 mb-3; }
-  .stat-card { @apply bg-dark-800 border border-dark-600 rounded-xl shadow-card p-4 flex flex-col gap-1; }
-  .no-website-alert { @apply bg-orange-500/10 border-2 border-orange-500/50 rounded-xl p-4 text-center; }
-  .panel-section { @apply border-b border-dark-600 pb-4 mb-4 last:border-0 last:pb-0 last:mb-0; }
+export default function NotesPanel({ leadId }: Props) {
+  const [newNote, setNewNote] = useState('');
+  const [followUp, setFollowUp] = useState<any>(null);
+  const qc = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['notes', leadId],
+    queryFn: () => getNotes(leadId).then((r) => r.data),
+  });
+
+  const addMutation = useMutation({
+    mutationFn: () => addNote(leadId, newNote),
+    onSuccess: () => {
+      setNewNote('');
+      qc.invalidateQueries({ queryKey: ['notes', leadId] });
+      toast.success('Note added');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (noteId: number) => deleteNote(noteId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['notes', leadId] }),
+  });
+
+  const followUpMutation = useMutation({
+    mutationFn: () => generateFollowUp(leadId),
+    onSuccess: (res) => setFollowUp(res.data),
+    onError: () => toast.error('Follow-up generation failed'),
+  });
+
+  return (
+    <div className="space-y-4">
+      {/* Add Note */}
+      <div>
+        <div className="section-title">Add Note</div>
+        <textarea
+          value={newNote}
+          onChange={(e) => setNewNote(e.target.value)}
+          placeholder="Add a note about this lead..."
+          className="input text-sm resize-none h-20"
+        />
+        <button
+          onClick={() => addMutation.mutate()}
+          disabled={!newNote.trim() || addMutation.isPending}
+          className="btn-primary mt-2 flex items-center gap-2 text-sm"
+        >
+          {addMutation.isPending ? <LoadingSpinner size={14} /> : <Plus size={14} />}
+          Add Note
+        </button>
+      </div>
+
+      {/* Smart Follow-Up */}
+      <div className="panel-section">
+        <div className="section-title">Smart Follow-Up AI</div>
+        <button
+          onClick={() => followUpMutation.mutate()}
+          disabled={followUpMutation.isPending}
+          className="btn-secondary flex items-center gap-2 text-sm w-full justify-center"
+        >
+          {followUpMutation.isPending ? <LoadingSpinner size={14} /> : <Brain size={14} />}
+          {followUpMutation.isPending ? 'Thinking...' : 'Suggest Next Action'}
+        </button>
+        {followUp && (
+          <div className="mt-3 space-y-2">
+            <div className="card-glow p-3">
+              <div className="text-xs text-accent/70 mb-1 font-medium">Recommended Action</div>
+              <p className="text-sm text-gray-200">{followUp.next_action}</p>
+            </div>
+            {followUp.followup_message && (
+              <div className="card p-3">
+                <div className="text-xs text-gray-500 mb-1 font-medium">Follow-Up Message</div>
+                <pre className="text-xs text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">
+                  {followUp.followup_message}
+                </pre>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Notes List */}
+      <div>
+        <div className="section-title">Notes ({data?.length || 0})</div>
+        {isLoading ? (
+          <div className="flex justify-center py-4"><LoadingSpinner /></div>
+        ) : data?.length === 0 ? (
+          <p className="text-gray-500 text-sm text-center py-4">No notes yet. Add one above.</p>
+        ) : (
+          <div className="space-y-2">
+            {data?.map((note: any) => (
+              <div key={note.id} className="card p-3 group">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm text-gray-300 leading-relaxed flex-1">{note.content}</p>
+                  <button
+                    onClick={() => deleteMutation.mutate(note.id)}
+                    className="text-gray-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 shrink-0 mt-0.5"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+                <div className="text-[10px] text-gray-600 mt-1.5 font-mono">
+                  {format(new Date(note.created_at), 'MMM d, yyyy · h:mm a')}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
