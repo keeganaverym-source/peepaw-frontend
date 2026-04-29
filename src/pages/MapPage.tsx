@@ -29,7 +29,6 @@ export default function MapPage() {
   const [keyword, setKeyword] = useState('');
   const [radius, setRadius] = useState(1500);
   const [filterMode, setFilterMode] = useState<'all' | 'easy_wins' | 'no_website'>('all');
-  const [easyWinIds, setEasyWinIds] = useState<Set<string>>(new Set());
   const [panelOpen, setPanelOpen] = useState(false);
 
   const searchMutation = useMutation({
@@ -41,11 +40,6 @@ export default function MapPage() {
     onSuccess: (res) => {
       const biz = res.data.businesses || [];
       setBusinesses(biz);
-      if (filterMode === 'easy_wins') {
-        setEasyWinIds(new Set(biz.map((b: Business) => b.place_id)));
-      } else {
-        setEasyWinIds(new Set());
-      }
       toast.success(`Found ${biz.length} businesses`);
     },
     onError: () => toast.error('Search failed. Check your API keys.'),
@@ -67,7 +61,6 @@ export default function MapPage() {
 
   // Marker color logic - kept for future use when markers are re-enabled
   // const getMarkerColor = (biz: Business) => {
-  //   if (easyWinIds.has(biz.place_id)) return '#ff6b35';
   //   if (!biz.has_website) return '#ff4444';
   //   const score = biz.lead_score || 0;
   //   if (score >= 4) return '#ff6b35';
@@ -161,7 +154,7 @@ export default function MapPage() {
 
           {filterMode !== 'all' && (
             <button
-              onClick={() => { setFilterMode('all'); setEasyWinIds(new Set()); }}
+              onClick={() => { setFilterMode('all'); }}
               className="btn-secondary py-2 text-xs"
             >
               <Filter size={12} className="inline mr-1" />
