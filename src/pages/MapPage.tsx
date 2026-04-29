@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { APIProvider, Map } from '@vis.gl/react-google-maps';
 import { Search, Zap, Globe, Filter, ChevronDown } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
@@ -8,7 +8,7 @@ import { searchBusinesses, findEasyWins, findNoWebsite, getBusinessDetails } fro
 import BusinessPanel from '../components/panel/BusinessPanel';
 import { LoadingSpinner } from '../components/shared/UI';
 
-const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY || '';
+let GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY || '';
 
 const NICHES = [
   { value: 'custom', label: 'All Businesses' },
@@ -20,8 +20,8 @@ const NICHES = [
 ];
 
 export default function MapPage() {
-  console.log('MapPage rendering, API Key length:', GOOGLE_MAPS_KEY.length);
-  console.log('API Key starts with:', GOOGLE_MAPS_KEY.substring(0, 10));
+  // Load API key from localStorage if available
+  const [apiKey, setApiKey] = useState(GOOGLE_MAPS_KEY);
   const [center, setCenter] = useState({ lat: 40.7128, lng: -74.006 });
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
@@ -30,6 +30,16 @@ export default function MapPage() {
   const [radius, setRadius] = useState(1500);
   const [filterMode, setFilterMode] = useState<'all' | 'easy_wins' | 'no_website'>('all');
   const [panelOpen, setPanelOpen] = useState(false);
+
+  // Load API key from localStorage on mount and when it changes
+  useEffect(() => {
+    const savedKey = localStorage.getItem('VITE_GOOGLE_MAPS_KEY');
+    if (savedKey) {
+      setApiKey(savedKey);
+      GOOGLE_MAPS_KEY = savedKey;
+      console.log('Loaded Google Maps API key from localStorage');
+    }
+  }, []);
 
   const searchMutation = useMutation({
     mutationFn: () => {
@@ -187,16 +197,27 @@ export default function MapPage() {
         </div>
 
         {/* Google Map */}
-        <APIProvider apiKey={GOOGLE_MAPS_KEY}>
-          <Map
-            defaultCenter={center}
-            defaultZoom={14}
-            onCenterChanged={(e) => setCenter(e.detail.center)}
-            style={{ width: '100%', height: '100%' }}
-          >
-            {/* Markers temporarily disabled to debug map loading */}
-          </Map>
-        </APIProvider>
+        {apiKey ? (
+          <APIProvider apiKey={apiKey}>
+            <Map
+              defaultCenter={center}
+              defaultZoom={14}
+              onCenterChanged={(e) => setCenter(e.detail.center)}
+              style={{ width: '100%', height: '100%' }}
+            >
+              {/* Markers temporarily disabled to debug map loading */}
+            </Map>
+          </APIProvider>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-dark-900">
+            <div className="text-center">
+              <p className="text-gray-400 mb-4">Google Maps API key not configured</p>
+              <a href="/settings" className="text-accent hover:text-accent/80 underline">
+                Go to Settings to add your API key
+              </a>
+            </div>
+          </div>
+        )}
 
         {/* Loading overlay */}
         {detailsMutation.isPending && (
