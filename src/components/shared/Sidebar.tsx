@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom';
-import { Map, Users, LayoutDashboard, Zap, Target } from 'lucide-react';
+import { Map, Users, LayoutDashboard, Zap, Target, Settings } from 'lucide-react';
 
 const navItems = [
   { to: '/', icon: Map, label: 'Map', exact: true },
   { to: '/leads', icon: Users, label: 'Leads' },
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/pitch', icon: Zap, label: 'Pitch' },
+  { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 
 export default function Sidebar() {

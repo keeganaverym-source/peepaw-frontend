@@ -6,6 +6,7 @@ import MapPage from './pages/MapPage';
 import LeadsPage from './pages/LeadsPage';
 import DashboardPage from './pages/DashboardPage';
 import PitchPage from './pages/PitchPage';
+import SettingsPage from './pages/SettingsPage';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 5 * 60 * 1000 } },
@@ -23,6 +24,7 @@ export default function App() {
               <Route path="/leads" element={<LeadsPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/pitch" element={<PitchPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
             </Routes>
           </main>
         </div>
