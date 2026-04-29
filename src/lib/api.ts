@@ -79,18 +79,18 @@ export interface DashboardStats {
 // ─── Business API ─────────────────────────────────────────────────────────────
 
 export const searchBusinesses = (params: {
-  lat: number; lng: number; radius?: number; niche?: string; keyword?: string;
+  lat: number; lng: number; radius?: number; niche?: string; keyword?: string; googleMapsApiKey?: string;
 }) => api.post('/api/businesses/search', { radius: 1500, niche: 'custom', keyword: '', ...params });
 
-export const getBusinessDetails = (placeId: string, niche = 'custom') =>
-  api.get(`/api/businesses/details/${placeId}`, { params: { niche } });
+export const getBusinessDetails = (placeId: string, niche = 'custom', googleMapsApiKey?: string) =>
+  api.get(`/api/businesses/details/${placeId}`, { params: { niche, googleMapsApiKey } });
 
 export const findEasyWins = (params: {
-  lat: number; lng: number; radius?: number; niche?: string;
+  lat: number; lng: number; radius?: number; niche?: string; googleMapsApiKey?: string;
 }) => api.post('/api/businesses/easy-wins', { radius: 1500, niche: 'custom', ...params });
 
 export const findNoWebsite = (params: {
-  lat: number; lng: number; radius?: number; niche?: string;
+  lat: number; lng: number; radius?: number; niche?: string; googleMapsApiKey?: string;
 }) => api.get('/api/businesses/no-website', { params: { radius: 1500, niche: 'custom', ...params } });
 
 // ─── Leads API ────────────────────────────────────────────────────────────────
@@ -126,16 +126,16 @@ export const deleteNote = (noteId: number) =>
 
 // ─── AI API ───────────────────────────────────────────────────────────────────
 
-export const analyzeBusinessAI = (business: Partial<Business> & { niche: string }) =>
+export const analyzeBusinessAI = (business: Partial<Business> & { niche: string; groqApiKey?: string; groqModel?: string }) =>
   api.post('/api/ai/analyze', business);
 
-export const generateEmail = (business: Partial<Business> & { niche: string }) =>
+export const generateEmail = (business: Partial<Business> & { niche: string; groqApiKey?: string; groqModel?: string }) =>
   api.post('/api/ai/email', business);
 
-export const generateScript = (business: Partial<Business> & { niche: string }) =>
+export const generateScript = (business: Partial<Business> & { niche: string; groqApiKey?: string; groqModel?: string }) =>
   api.post('/api/ai/script', business);
 
-export const generatePitchPackage = (business: Partial<Business> & { niche: string }) =>
+export const generatePitchPackage = (business: Partial<Business> & { niche: string; groqApiKey?: string; groqModel?: string }) =>
   api.post('/api/ai/pitch-package', business);
 
 export const generateFollowUp = (leadId: number) =>

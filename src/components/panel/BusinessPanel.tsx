@@ -49,16 +49,24 @@ export default function BusinessPanel({ business, niche, onClose }: Props) {
   });
 
   const analyzeMutation = useMutation({
-    mutationFn: () => analyzeBusinessAI({ ...business, niche }),
+    mutationFn: () => {
+      const groqApiKey = localStorage.getItem('VITE_GROQ_API_KEY') || '';
+      const groqModel = localStorage.getItem('VITE_GROQ_MODEL') || 'mixtral-8x7b-32768';
+      return analyzeBusinessAI({ ...business, niche, groqApiKey, groqModel });
+    },
     onSuccess: (res) => {
       setAiAnalysis(res.data);
       setActiveTab('analysis');
     },
-    onError: () => toast.error('AI analysis failed. Check your OpenAI key.'),
+    onError: () => toast.error('AI analysis failed. Check your Groq API key.'),
   });
 
   const emailMutation = useMutation({
-    mutationFn: () => generateEmail({ ...business, niche }),
+    mutationFn: () => {
+      const groqApiKey = localStorage.getItem('VITE_GROQ_API_KEY') || '';
+      const groqModel = localStorage.getItem('VITE_GROQ_MODEL') || 'mixtral-8x7b-32768';
+      return generateEmail({ ...business, niche, groqApiKey, groqModel });
+    },
     onSuccess: (res) => {
       setEmailContent(res.data.email);
       setActiveTab('outreach');
@@ -67,7 +75,11 @@ export default function BusinessPanel({ business, niche, onClose }: Props) {
   });
 
   const scriptMutation = useMutation({
-    mutationFn: () => generateScript({ ...business, niche }),
+    mutationFn: () => {
+      const groqApiKey = localStorage.getItem('VITE_GROQ_API_KEY') || '';
+      const groqModel = localStorage.getItem('VITE_GROQ_MODEL') || 'mixtral-8x7b-32768';
+      return generateScript({ ...business, niche, groqApiKey, groqModel });
+    },
     onSuccess: (res) => {
       setScriptContent(res.data.script);
       setActiveTab('outreach');
@@ -76,7 +88,11 @@ export default function BusinessPanel({ business, niche, onClose }: Props) {
   });
 
   const pitchMutation = useMutation({
-    mutationFn: () => generatePitchPackage({ ...business, niche }),
+    mutationFn: () => {
+      const groqApiKey = localStorage.getItem('VITE_GROQ_API_KEY') || '';
+      const groqModel = localStorage.getItem('VITE_GROQ_MODEL') || 'mixtral-8x7b-32768';
+      return generatePitchPackage({ ...business, niche, groqApiKey, groqModel });
+    },
     onSuccess: (res) => {
       setPitchPackage(res.data);
       setActiveTab('pitch');

@@ -43,9 +43,10 @@ export default function MapPage() {
 
   const searchMutation = useMutation({
     mutationFn: () => {
-      if (filterMode === 'easy_wins') return findEasyWins({ lat: center.lat, lng: center.lng, radius, niche });
-      if (filterMode === 'no_website') return findNoWebsite({ lat: center.lat, lng: center.lng, radius, niche });
-      return searchBusinesses({ lat: center.lat, lng: center.lng, radius, niche, keyword });
+      const googleMapsApiKey = localStorage.getItem('VITE_GOOGLE_MAPS_KEY') || '';
+      if (filterMode === 'easy_wins') return findEasyWins({ lat: center.lat, lng: center.lng, radius, niche, googleMapsApiKey });
+      if (filterMode === 'no_website') return findNoWebsite({ lat: center.lat, lng: center.lng, radius, niche, googleMapsApiKey });
+      return searchBusinesses({ lat: center.lat, lng: center.lng, radius, niche, keyword, googleMapsApiKey });
     },
     onSuccess: (res) => {
       const biz = res.data.businesses || [];
@@ -56,7 +57,10 @@ export default function MapPage() {
   });
 
   const detailsMutation = useMutation({
-    mutationFn: (placeId: string) => getBusinessDetails(placeId, niche),
+    mutationFn: (placeId: string) => {
+      const googleMapsApiKey = localStorage.getItem('VITE_GOOGLE_MAPS_KEY') || '';
+      return getBusinessDetails(placeId, niche, googleMapsApiKey);
+    },
     onSuccess: (res) => {
       setSelectedBusiness(res.data);
       setPanelOpen(true);
