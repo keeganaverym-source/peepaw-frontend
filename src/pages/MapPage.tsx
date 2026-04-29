@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
+import { useState } from 'react';
+import { APIProvider, Map } from '@vis.gl/react-google-maps';
 import { Search, Zap, Globe, Filter, ChevronDown } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -29,7 +29,6 @@ export default function MapPage() {
   const [keyword, setKeyword] = useState('');
   const [radius, setRadius] = useState(1500);
   const [filterMode, setFilterMode] = useState<'all' | 'easy_wins' | 'no_website'>('all');
-  const [easyWinIds, setEasyWinIds] = useState<Set<string>>(new Set());
   const [panelOpen, setPanelOpen] = useState(false);
 
   const searchMutation = useMutation({
@@ -41,11 +40,6 @@ export default function MapPage() {
     onSuccess: (res) => {
       const biz = res.data.businesses || [];
       setBusinesses(biz);
-      if (filterMode === 'easy_wins') {
-        setEasyWinIds(new Set(biz.map((b: Business) => b.place_id)));
-      } else {
-        setEasyWinIds(new Set());
-      }
       toast.success(`Found ${biz.length} businesses`);
     },
     onError: () => toast.error('Search failed. Check your API keys.'),
@@ -59,19 +53,6 @@ export default function MapPage() {
     },
     onError: () => toast.error('Failed to load business details'),
   });
-
-  const handleMarkerClick = useCallback((biz: Business) => {
-    detailsMutation.mutate(biz.place_id);
-  }, [niche]);
-
-  const getMarkerColor = (biz: Business) => {
-    if (easyWinIds.has(biz.place_id)) return '#ff6b35';
-    if (!biz.has_website) return '#ff4444';
-    const score = biz.lead_score || 0;
-    if (score >= 4) return '#ff6b35';
-    if (score >= 2.5) return '#ffb800';
-    return '#4a9eff';
-  };
 
   return (
     <div className="flex h-full">
@@ -159,7 +140,7 @@ export default function MapPage() {
 
           {filterMode !== 'all' && (
             <button
-              onClick={() => { setFilterMode('all'); setEasyWinIds(new Set()); }}
+              onClick={() => { setFilterMode('all'); }}
               className="btn-secondary py-2 text-xs"
             >
               <Filter size={12} className="inline mr-1" />
