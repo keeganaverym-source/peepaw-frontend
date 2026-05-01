@@ -5,6 +5,10 @@ You help a web design, graphic design, and marketing agency identify and close l
 Your analysis is direct, actionable, and sales-focused. No fluff. No filler.
 Always end with a clear recommendation.`;
 
+// Currently available and free Groq models
+const DEFAULT_GROQ_MODEL = "groq/compound";
+// const SECONDARY_GROQ_MODEL = "llama-3.3-70b-versatile";
+
 export default async (req: Request, context: Context) => {
   if (req.method !== "POST") {
     return new Response("Method Not Allowed", { status: 405 });
@@ -23,7 +27,7 @@ export default async (req: Request, context: Context) => {
       });
     }
 
-    const model = groqModel || "llama-3.3-70b-versatile"; // Default to Llama 3.3 70B as the best available model
+    const model = groqModel || DEFAULT_GROQ_MODEL;
     let prompt = "";
 
     if (path === "analyze") {
