@@ -6,8 +6,9 @@ Your analysis is direct, actionable, and sales-focused. No fluff. No filler.
 Always end with a clear recommendation.`;
 
 // Currently available and free Groq models
-const DEFAULT_GROQ_MODEL = "groq/compound";
-// const SECONDARY_GROQ_MODEL = "llama-3.3-70b-versatile";
+// Using the most stable production IDs
+const DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile";
+const SECONDARY_GROQ_MODEL = "llama-3.1-8b-instant";
 
 export default async (req: Request, context: Context) => {
   if (req.method !== "POST") {
@@ -27,7 +28,11 @@ export default async (req: Request, context: Context) => {
       });
     }
 
-    const model = groqModel || DEFAULT_GROQ_MODEL;
+    // If the provided model is decommissioned or empty, use our default
+    const decommissionedModels = ["llama3-70b", "llama3-8b", "mixtral-8x7b"];
+    const isDecommissioned = groqModel && decommissionedModels.some(old => groqModel.includes(old));
+    const model = (!groqModel || isDecommissioned) ? DEFAULT_GROQ_MODEL : groqModel;
+    
     let prompt = "";
 
     if (path === "analyze") {
@@ -90,8 +95,6 @@ Format the script with:
 Keep it natural, confident, and under 2 minutes when read aloud.
 Label each section clearly.`;
     } else if (path === "pitch-package") {
-      // For pitch-package, we'll just return a combined prompt for simplicity in a single function call
-      // or we could do multiple calls, but let's keep it simple for now.
       prompt = `Generate a full pitch package for ${data.name} (${data.niche || "custom"}).
 Include:
 1. A cold email pitch (with subject)
@@ -108,22 +111,32 @@ Format as JSON:
       return new Response("Not Found", { status: 404 });
     }
 
-    const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${groqApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: model,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: prompt },
-        ],
-        response_format: (path === "analyze" || path === "pitch-package") ? { type: "json_object" } : undefined,
-        temperature: 0.7,
-      }),
-    });
+    const makeRequest = async (selectedModel: string) => {
+      return await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${groqApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: selectedModel,
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: prompt },
+          ],
+          response_format: (path === "analyze" || path === "pitch-package") ? { type: "json_object" } : undefined,
+          temperature: 0.7,
+        }),
+      });
+    };
+
+    let groqResponse = await makeRequest(model);
+    
+    // Fallback logic if the primary model fails
+    if (!groqResponse.ok && model === DEFAULT_GROQ_MODEL) {
+      console.log(`Primary model ${model} failed, retrying with ${SECONDARY_GROQ_MODEL}`);
+      groqResponse = await makeRequest(SECONDARY_GROQ_MODEL);
+    }
 
     const groqData = await groqResponse.json();
     if (!groqResponse.ok) {
