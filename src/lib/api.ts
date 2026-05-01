@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 export const api = axios.create({
   baseURL: API_BASE,
@@ -127,16 +127,16 @@ export const deleteNote = (noteId: number) =>
 // ─── AI API ───────────────────────────────────────────────────────────────────
 
 export const analyzeBusinessAI = (business: Partial<Business> & { niche: string; groqApiKey?: string; groqModel?: string }) =>
-  api.post('/api/ai/analyze', business);
+  api.post('/.netlify/functions/ai/analyze', business);
 
 export const generateEmail = (business: Partial<Business> & { niche: string; groqApiKey?: string; groqModel?: string }) =>
-  api.post('/api/ai/email', business);
+  api.post('/.netlify/functions/ai/email', business);
 
 export const generateScript = (business: Partial<Business> & { niche: string; groqApiKey?: string; groqModel?: string }) =>
-  api.post('/api/ai/script', business);
+  api.post('/.netlify/functions/ai/script', business);
 
 export const generatePitchPackage = (business: Partial<Business> & { niche: string; groqApiKey?: string; groqModel?: string }) =>
-  api.post('/api/ai/pitch-package', business);
+  api.post('/.netlify/functions/ai/pitch-package', business);
 
 export const generateFollowUp = (leadId: number) =>
   api.post('/api/ai/followup', { lead_id: leadId });
