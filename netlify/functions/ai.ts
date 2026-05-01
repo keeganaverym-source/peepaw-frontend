@@ -23,7 +23,7 @@ export default async (req: Request, context: Context) => {
       });
     }
 
-    const model = groqModel || "llama-3.3-70b-versatile";
+    const model = groqModel || "llama-3.3-70b-versatile"; // Default to Llama 3.3 70B as the best available model
     let prompt = "";
 
     if (path === "analyze") {

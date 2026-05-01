@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 export default function SettingsPage() {
   const [googleMapsKey, setGoogleMapsKey] = useState('');
   const [groqApiKey, setGroqApiKey] = useState('');
-  const [groqModel, setGroqModel] = useState('mixtral-8x7b-32768');
+  const [groqModel, setGroqModel] = useState('llama-3.3-70b-versatile');
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
@@ -13,7 +13,7 @@ export default function SettingsPage() {
   useEffect(() => {
     const savedGoogleKey = localStorage.getItem('VITE_GOOGLE_MAPS_KEY') || '';
     const savedGroqKey = localStorage.getItem('VITE_GROQ_API_KEY') || '';
-    const savedModel = localStorage.getItem('VITE_GROQ_MODEL') || 'mixtral-8x7b-32768';
+    const savedModel = localStorage.getItem('VITE_GROQ_MODEL') || 'llama-3.3-70b-versatile';
     setGoogleMapsKey(savedGoogleKey);
     setGroqApiKey(savedGroqKey);
     setGroqModel(savedModel);
@@ -68,7 +68,7 @@ export default function SettingsPage() {
   const handleReset = () => {
     const savedGoogleKey = localStorage.getItem('VITE_GOOGLE_MAPS_KEY') || '';
     const savedGroqKey = localStorage.getItem('VITE_GROQ_API_KEY') || '';
-    const savedModel = localStorage.getItem('VITE_GROQ_MODEL') || 'mixtral-8x7b-32768';
+    const savedModel = localStorage.getItem('VITE_GROQ_MODEL') || 'llama-3.3-70b-versatile';
     setGoogleMapsKey(savedGoogleKey);
     setGroqApiKey(savedGroqKey);
     setGroqModel(savedModel);
@@ -164,12 +164,13 @@ export default function SettingsPage() {
                 onChange={handleGroqModelChange}
                 className="w-full px-4 py-2 bg-dark-800 border border-dark-600 rounded-lg text-white focus:outline-none focus:border-accent/50 transition-colors"
               >
-                <option value="mixtral-8x7b-32768">Groq Mixtral 8x7B (Faster)</option>
-                <option value="llama-3.1-70b-versatile">Groq Llama 3.1 70B (More Powerful)</option>
+                <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Best Overall)</option>
+                <option value="llama-3.1-8b-instant">Llama 3.1 8B (Fastest)</option>
+                <option value="openai/gpt-oss-120b">GPT OSS 120B (High Capacity)</option>
               </select>
             </div>
             <div className="text-xs text-gray-400">
-              Selected: {groqModel === 'mixtral-8x7b-32768' ? 'Mixtral 8x7B (Faster)' : 'Llama 3.1 70B (More Powerful)'}
+              Selected: {groqModel === 'llama-3.3-70b-versatile' ? 'Llama 3.3 70B (Best Overall)' : (groqModel === 'llama-3.1-8b-instant' ? 'Llama 3.1 8B (Fastest)' : 'GPT OSS 120B')}
             </div>
           </div>
 
@@ -239,12 +240,16 @@ export default function SettingsPage() {
               <h3 className="text-sm font-semibold text-white mb-2">AI Models</h3>
               <div className="text-sm text-gray-400 space-y-2">
                 <div>
-                  <p className="font-semibold text-white">Mixtral 8x7B (Faster)</p>
-                  <p className="text-xs">Faster response times, good for real-time applications</p>
+                  <p className="font-semibold text-white">Llama 3.3 70B (Best Overall)</p>
+                  <p className="text-xs">The current gold standard for speed and intelligence on Groq.</p>
                 </div>
                 <div>
-                  <p className="font-semibold text-white">Llama 3.1 70B (More Powerful)</p>
-                  <p className="text-xs">More powerful model for complex analysis and reasoning</p>
+                  <p className="font-semibold text-white">Llama 3.1 8B (Fastest)</p>
+                  <p className="text-xs">Ultra-fast response times for simple tasks.</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-white">GPT OSS 120B (High Capacity)</p>
+                  <p className="text-xs">Large-scale model for deep reasoning and complex outputs.</p>
                 </div>
               </div>
             </div>
