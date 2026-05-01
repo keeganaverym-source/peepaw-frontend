@@ -5,10 +5,9 @@ You help a web design, graphic design, and marketing agency identify and close l
 Your analysis is direct, actionable, and sales-focused. No fluff. No filler.
 Always end with a clear recommendation.`;
 
-// Currently available and free Groq models
-// Using the most stable production IDs
-const DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile";
-const SECONDARY_GROQ_MODEL = "llama-3.1-8b-instant";
+// Currently available and free Groq models - using the most stable production IDs
+const PRIMARY_MODEL = "llama-3.3-70b-versatile";
+const SECONDARY_MODEL = "llama-3.1-8b-instant";
 
 export default async (req: Request, context: Context) => {
   if (req.method !== "POST") {
@@ -28,16 +27,15 @@ export default async (req: Request, context: Context) => {
       });
     }
 
-    // If the provided model is decommissioned or empty, use our default
-    const decommissionedModels = ["llama3-70b", "llama3-8b", "mixtral-8x7b"];
-    const isDecommissioned = groqModel && decommissionedModels.some(old => groqModel.includes(old));
-    const model = (!groqModel || isDecommissioned) ? DEFAULT_GROQ_MODEL : groqModel;
+    // AUTO-CORRECTION: If the provided model is decommissioned or invalid, use our stable primary model
+    const decommissioned = ["llama3-70b", "llama3-8b", "mixtral-8x7b", "groq/compound"];
+    const isInvalid = !groqModel || decommissioned.some(old => groqModel.toLowerCase().includes(old));
+    const model = isInvalid ? PRIMARY_MODEL : groqModel;
     
     let prompt = "";
 
     if (path === "analyze") {
       prompt = `Analyze this business as a potential client for our web design, graphic design, and marketing agency.
-
 Business: ${data.name}
 Category: ${data.category || "N/A"}
 Niche: ${data.niche || "custom"}
@@ -55,58 +53,23 @@ Provide a structured analysis in exactly this JSON format:
   "services_to_sell": ["service 1 with why", "service 2 with why", "service 3 with why"],
   "one_liner": "One punchy sentence summarizing why we should pitch them"
 }
-
 Be specific to their niche. Be confident. Be concise.`;
     } else if (path === "email") {
       const opportunity = !data.has_website ? "no website at all" : `a website that scores ${data.website_score || "N/A"}/5`;
       prompt = `Write a personalized cold email to ${data.name} — a ${data.niche || "custom"} business.
-
-They have ${opportunity}.
-Rating: ${data.rating || "N/A"} stars.
-
-Requirements:
-- Subject line included
-- 3-4 short paragraphs
-- Conversational but professional
-- Specific to their situation
-- Clear call to action
-- Slightly witty but not cringe
-- Sign off as "The PeePaw Team"
-
-Format:
-SUBJECT: [subject line]
-
-[email body]`;
+They have ${opportunity}. Rating: ${data.rating || "N/A"} stars.
+Requirements: Subject line included, 3-4 short paragraphs, conversational but professional, specific, clear CTA, slightly witty, sign off as "The PeePaw Team".
+Format: SUBJECT: [subject line]\n\n[email body]`;
     } else if (path === "script") {
       const situation = !data.has_website ? "they have no website" : `their website scores ${data.website_score || "N/A"}/5`;
       prompt = `Write a cold call script for calling ${data.name} — a ${data.niche || "custom"} business.
-
-Situation: ${situation}
-Rating: ${data.rating || "N/A"} stars
-
-Format the script with:
-- OPENER (first 10 seconds)
-- HOOK (why you're calling)
-- PAIN POINT (what problem you solve)
-- PITCH (what you offer)
-- OBJECTION HANDLERS (2-3 common ones)
-- CLOSE (ask for the meeting)
-
-Keep it natural, confident, and under 2 minutes when read aloud.
-Label each section clearly.`;
+Situation: ${situation}. Rating: ${data.rating || "N/A"} stars.
+Format: OPENER, HOOK, PAIN POINT, PITCH, OBJECTION HANDLERS, CLOSE.
+Keep it natural, confident, and under 2 minutes.`;
     } else if (path === "pitch-package") {
       prompt = `Generate a full pitch package for ${data.name} (${data.niche || "custom"}).
-Include:
-1. A cold email pitch (with subject)
-2. A cold call script
-3. 3 service bundle packages (name, services, value_prop)
-
-Format as JSON:
-{
-  "email": "...",
-  "call_script": "...",
-  "service_bundles": [{"name": "...", "services": ["..."], "value_prop": "..."}]
-}`;
+Include: 1. Cold email pitch (with subject), 2. Cold call script, 3. 3 service bundle packages.
+Format as JSON: {"email": "...", "call_script": "...", "service_bundles": [{"name": "...", "services": ["..."], "value_prop": "..."}]}`;
     } else {
       return new Response("Not Found", { status: 404 });
     }
@@ -133,9 +96,9 @@ Format as JSON:
     let groqResponse = await makeRequest(model);
     
     // Fallback logic if the primary model fails
-    if (!groqResponse.ok && model === DEFAULT_GROQ_MODEL) {
-      console.log(`Primary model ${model} failed, retrying with ${SECONDARY_GROQ_MODEL}`);
-      groqResponse = await makeRequest(SECONDARY_GROQ_MODEL);
+    if (!groqResponse.ok && model === PRIMARY_MODEL) {
+      console.log(`Primary model ${model} failed, retrying with ${SECONDARY_MODEL}`);
+      groqResponse = await makeRequest(SECONDARY_MODEL);
     }
 
     const groqData = await groqResponse.json();
