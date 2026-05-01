@@ -68,10 +68,9 @@ export default function MapPage() {
     onError: () => toast.error('Failed to load business details'),
   });
 
-  // Marker click handler - kept for future use when markers are re-enabled
-  // const handleMarkerClick = useCallback((biz: Business) => {
-  //   detailsMutation.mutate(biz.place_id);
-  // }, [niche]);
+  const handleBusinessClick = (biz: Business) => {
+    detailsMutation.mutate(biz.place_id);
+  };
 
   // Marker color logic - kept for future use when markers are re-enabled
   // const getMarkerColor = (biz: Business) => {
@@ -140,7 +139,10 @@ export default function MapPage() {
 
           {/* Easy Wins */}
           <button
-            onClick={() => { setFilterMode('easy_wins'); searchMutation.mutate(); }}
+            onClick={() => { 
+              setFilterMode('easy_wins'); 
+              setTimeout(() => searchMutation.mutate(), 0); 
+            }}
             disabled={searchMutation.isPending}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all border ${
               filterMode === 'easy_wins'
@@ -154,7 +156,10 @@ export default function MapPage() {
 
           {/* No Website */}
           <button
-            onClick={() => { setFilterMode('no_website'); searchMutation.mutate(); }}
+            onClick={() => { 
+              setFilterMode('no_website'); 
+              setTimeout(() => searchMutation.mutate(), 0); 
+            }}
             disabled={searchMutation.isPending}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all border ${
               filterMode === 'no_website'
@@ -209,7 +214,25 @@ export default function MapPage() {
               onCenterChanged={(e) => setCenter(e.detail.center)}
               style={{ width: '100%', height: '100%' }}
             >
-              {/* Markers temporarily disabled to debug map loading */}
+              {businesses.map((biz) => (
+                <div
+                  key={biz.place_id}
+                  onClick={() => handleBusinessClick(biz)}
+                  style={{
+                    position: 'absolute',
+                    transform: 'translate(-50%, -50%)',
+                    cursor: 'pointer',
+                    backgroundColor: biz.no_website ? '#ff4444' : (biz.lead_score && biz.lead_score >= 4 ? '#ff6b35' : '#4a9eff'),
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '50%',
+                    border: '2px solid white',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                    zIndex: 1
+                  }}
+                  title={biz.name}
+                />
+              ))}
             </Map>
           </APIProvider>
         ) : (
